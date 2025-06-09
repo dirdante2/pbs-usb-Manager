@@ -20,7 +20,7 @@ All wrapped in a clean Bash menu for manual use.
 - ✅ Forcefully kill processes accessing the pool mount path (for clean export)
 - ✅ PBS service reload instead of full restart
 - ✅ Clean status output before actions
-- ✅ Minimal dependencies (`bash`, `zpool`, `awk`, `grep`, `fuser`, `systemctl`)
+- ✅ Minimal dependencies (`bash`, `zpool`, `awk`, `grep`, `systemctl`)
 
 ## 💡 Usage
 chmod +x usb-zfs-menu.sh
