@@ -1,21 +1,18 @@
 #!/bin/bash
 
 POOLNAME="usb-1tb" ## Change this to your actual pool name
-
 MOUNTPOINT="/mnt/datastore/$POOLNAME"
 CONFIG="/etc/proxmox-backup/datastore.cfg"
 
-# Function: Check current status of pool and datastore
+# Function: Check pool/datastore status
 check_status() {
     echo ""
     echo "🔍 Checking..."
 
-    # Check if pool is imported
     if zpool list "$POOLNAME" &>/dev/null; then
         echo "✅ Pool is imported"
         POOL_IMPORTED=true
         POOL_EXISTS=true
-    # Else check if pool is available for import
     elif zpool import 2>/dev/null | grep -q "$POOLNAME"; then
         echo "✅ Pool exists (not yet imported)"
         POOL_IMPORTED=false
@@ -26,7 +23,6 @@ check_status() {
         POOL_EXISTS=false
     fi
 
-    # PBS datastore check
     if grep -q "datastore: $POOLNAME" "$CONFIG"; then
         echo "✅ PBS datastore exists"
         DATASTORE_EXISTS=true
@@ -36,7 +32,6 @@ check_status() {
     fi
 }
 
-
 # Function: Ensure mountpoint exists
 ensure_mountpoint() {
     if [ ! -d "$MOUNTPOINT" ]; then
@@ -45,7 +40,7 @@ ensure_mountpoint() {
     fi
 }
 
-# Function: Add datastore config if missing
+# Function: Add PBS datastore config
 add_datastore_config() {
     if ! grep -q "datastore: $POOLNAME" "$CONFIG"; then
         echo -e "\ndatastore: $POOLNAME\n\tpath $MOUNTPOINT" >> "$CONFIG"
@@ -56,7 +51,7 @@ add_datastore_config() {
     fi
 }
 
-# Function: Remove entire datastore block from config
+# Function: Remove PBS datastore config block
 remove_datastore_config() {
     if grep -q "datastore: $POOLNAME" "$CONFIG"; then
         awk -v ds="datastore: $POOLNAME" '
@@ -78,7 +73,7 @@ remove_datastore_config() {
     fi
 }
 
-# Initial status check
+# Start with status
 check_status
 
 # Menu
@@ -127,6 +122,13 @@ case "$choice" in
         fi
         ;;
     2)
+        # Prevent killing own shell if inside mountpoint
+        if [[ "$PWD" == "$MOUNTPOINT"* ]]; then
+            echo "⚠️ You are currently inside the mountpoint ($MOUNTPOINT)."
+            echo "Please 'cd' out of it before exporting."
+            exit 1
+        fi
+
         echo "🧹 Removing datastore config..."
         if remove_datastore_config; then
             echo "🔄 Reloading PBS service..."
@@ -136,14 +138,14 @@ case "$choice" in
             echo "ℹ️ No config entry to remove – PBS remains unchanged."
         fi
 
-        echo "📤 Killing any processes accessing $MOUNTPOINT ..."
-        fuser -km "$MOUNTPOINT" 2>/dev/null
+        echo "📤 Unmounting $MOUNTPOINT (if mounted)..."
+        umount "$MOUNTPOINT" 2>/dev/null
 
         echo "📤 Exporting ZFS pool '$POOLNAME'..."
         if zpool export "$POOLNAME"; then
             echo "✅ Export successful. You may now safely unplug the drive."
         else
-            echo "❌ Export failed. The pool may still be busy."
+            echo "❌ Export failed. The pool may still be in use."
         fi
         ;;
     3)
