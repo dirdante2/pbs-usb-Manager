@@ -29,8 +29,11 @@ chmod +x usb-zfs-menu.sh
 
 ## 🛠️ Configuration
 Update the following variables inside the script if needed:
+
 POOLNAME="usb-1tb"
+
 MOUNTPOINT="/mnt/datastore/usb-1tb"
+
 CONFIG="/etc/proxmox-backup/datastore.cfg"
 
 ## ⚠️ Important Notes
